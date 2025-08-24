@@ -1,123 +1,142 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { todasAsPerguntas } from "../Data/perguntas";
-import { Pergunta, RespostaUsuario } from "../types";
+import { useRanking } from "../contexts/RankingContext";
 
 export default function Questionario() {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
-  const [respostasUsuario, setRespostasUsuario] = useState<RespostaUsuario[]>([]);
-  const [tempoDecorrido, setTempoDecorrido] = useState(0);
+  const [perguntaAtual, setPerguntaAtual] = useState(0);
+  const [opcaoSelecionada, setOpcaoSelecionada] = useState<number | null>(null);
+  const [tempo, setTempo] = useState(0);
+  const [finalizado, setFinalizado] = useState(false);
+  const [acertos, setAcertos] = useState(0);
+  const [respostas, setRespostas] = useState<any[]>([]);
+  
   const navigate = useNavigate();
-
-  const currentQuestion: Pergunta = todasAsPerguntas[currentQuestionIndex];
-  const questionarioConcluido = currentQuestionIndex >= todasAsPerguntas.length;
-
+  const { currentUserName, addResult } = useRanking();
 
   useEffect(() => {
-    if (questionarioConcluido) return;
-
-    const timerId = setInterval(() => {
-      setTempoDecorrido((prev) => prev + 1);
+    if (finalizado) return;
+    
+    const timer = setInterval(() => {
+      setTempo(segundos => segundos + 1);
     }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [finalizado]);
 
-    return () => clearInterval(timerId);
-  }, [currentQuestionIndex, questionarioConcluido]);
-
-  const handleOptionSelect = (id: number) => {
-    setSelectedOptionId(id);
+  const selecionarOpcao = (id: number) => {
+    setOpcaoSelecionada(id);
   };
 
-  const handleNextQuestion = () => {
-    if (selectedOptionId === null) return;
+  const proximaPergunta = () => {
+    if (opcaoSelecionada === null) return;
 
-      const novaResposta: RespostaUsuario = {
-      idPergunta: currentQuestion.id,
-      idOpcao: selectedOptionId,
+    const pergunta = todasAsPerguntas[perguntaAtual];
+    const opcaoCorreta = pergunta.opcoes.find(opcao => opcao.certa);
+    
+    if (opcaoCorreta && opcaoSelecionada === opcaoCorreta.id) {
+      setAcertos(acertos + 1);
+    }
+
+    const novaResposta = {
+      perguntaId: pergunta.id,
+      opcaoId: opcaoSelecionada
     };
+    setRespostas([...respostas, novaResposta]);
 
-    setRespostasUsuario([...respostasUsuario, novaResposta]);
-
-    if (currentQuestionIndex < todasAsPerguntas.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setSelectedOptionId(null);
+    if (perguntaAtual < todasAsPerguntas.length - 1) {
+      setPerguntaAtual(perguntaAtual + 1);
+      setOpcaoSelecionada(null);
     } else {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      const porcentagem = Math.round((acertos / todasAsPerguntas.length) * 100);
+     
+      addResult({
+        name: currentUserName,
+        score: acertos,
+        total: todasAsPerguntas.length,
+        percentage: porcentagem,
+        time: tempo
+      });
+      
+      setFinalizado(true);
     }
   };
 
-  const handleRestart = () => {
-    setCurrentQuestionIndex(0);
-    setSelectedOptionId(null);
-    setRespostasUsuario([]);
-    setTempoDecorrido(0);
+  const recomecar = () => {
+    setPerguntaAtual(0);
+    setOpcaoSelecionada(null);
+    setTempo(0);
+    setFinalizado(false);
+    setAcertos(0);
+    setRespostas([]);
   };
 
-  const handleGoHome = () => {
+  const voltarParaHome = () => {
     navigate("/");
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const verRanking = () => {
+    navigate("/ranking");
   };
 
-  if (questionarioConcluido) {
-    const acertos = respostasUsuario.filter((resposta) => {
-      const pergunta = todasAsPerguntas.find((p) => p.id === resposta.idPergunta);
-      const opcao = pergunta?.opcoes.find((o) => o.id === resposta.idOpcao);
-      return opcao?.certa;
-    }).length;
+  const formatarTempo = (segundos: number) => {
+    const minutos = Math.floor(segundos / 60);
+    const segundosRestantes = segundos % 60;
+    return `${minutos}:${segundosRestantes < 10 ? '0' : ''}${segundosRestantes}`;
+  };
 
+  if (finalizado) {
     return (
       <div className="questionario-container">
-        <h2>Questionário Concluído!</h2>
-        <p>Tempo total: {formatTime(tempoDecorrido)}</p>
-        <p>
-          Você acertou {acertos} de {todasAsPerguntas.length} perguntas (
-          {Math.round((acertos / todasAsPerguntas.length) * 100)}%)
-        </p>
+        <h2>Parabéns! Você terminou! 🎉</h2>
+        <p>Tempo: {formatarTempo(tempo)}</p>
+        <p>Acertos: {acertos} de {todasAsPerguntas.length}</p>
+        <p>Porcentagem: {Math.round((acertos / todasAsPerguntas.length) * 100)}%</p>
+        
         <div className="button-group">
-          <button onClick={handleRestart} className="restart-button">
-            Refazer questionário
+          <button onClick={recomecar} className="restart-button">
+            Fazer novamente
           </button>
-          <button onClick={handleGoHome} className="home-button">
+          <button onClick={voltarParaHome} className="home-button">
             Voltar para Home
+          </button>
+          <button onClick={verRanking} className="start-button">
+            Ver Ranking
           </button>
         </div>
       </div>
     );
   }
 
+  const pergunta = todasAsPerguntas[perguntaAtual];
+  
   return (
     <div className="questionario-container">
-      <div className="timer">Tempo: {formatTime(tempoDecorrido)}</div>
+      <div className="timer">⏰ Tempo: {formatarTempo(tempo)}</div>
       <div className="progresso">
-        Pergunta {currentQuestionIndex + 1} de {todasAsPerguntas.length}
+        Pergunta {perguntaAtual + 1} de {todasAsPerguntas.length}
       </div>
-      <h2>{currentQuestion.questao}</h2>
+      
+      <h2>{pergunta.questao}</h2>
+      
       <div className="opcoes-container">
-        {currentQuestion.opcoes.map((opcao) => (
+        {pergunta.opcoes.map((opcao) => (
           <button
             key={opcao.id}
-            className={`opcao-button ${
-              selectedOptionId === opcao.id ? "selected" : ""
-            }`}
-            onClick={() => handleOptionSelect(opcao.id)}
+            className={`opcao-button ${opcaoSelecionada === opcao.id ? "selected" : ""}`}
+            onClick={() => selecionarOpcao(opcao.id)}
           >
             {opcao.opcao}
           </button>
         ))}
       </div>
+      
       <button
-        onClick={handleNextQuestion}
-        disabled={selectedOptionId === null}
+        onClick={proximaPergunta}
+        disabled={opcaoSelecionada === null}
         className="next-button"
       >
-        {currentQuestionIndex === todasAsPerguntas.length - 1
-          ? "Finalizar"
-          : "Próxima Pergunta"}
+        {perguntaAtual === todasAsPerguntas.length - 1 ? "Finalizar" : "Próxima"}
       </button>
     </div>
   );

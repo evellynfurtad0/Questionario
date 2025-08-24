@@ -33,7 +33,7 @@ export const todasAsPerguntas: Pergunta[] = [
   },
   {
     id: 4,
-    questao: "Se um pacote de bala 20 balas e eu pego 5 balas, quantas balas eu tenho?",
+    questao: "Se um pacote de bala tem 20 balas e eu pego 5 balas, quantas balas eu tenho?",
     opcoes: [
       { id: 1, opcao: "15", certa: false },
       { id: 2, opcao: "5", certa: true },
@@ -85,7 +85,7 @@ export const todasAsPerguntas: Pergunta[] = [
     id: 9,
     questao: "Qual é o valor de 5² + 3³?",
     opcoes: [
-      { id: 1, opcao: "32", certa: true },
+      { id: 1, opcao: "52", certa: true },
       { id: 2, opcao: "28", certa: false },
       { id: 3, opcao: "34", certa: false },
       { id: 4, opcao: "16", certa: false },
