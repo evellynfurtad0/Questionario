@@ -88,7 +88,7 @@ export default function Questionario() {
   if (finalizado) {
     return (
       <div className="questionario-container">
-        <h2>Parabéns! Você terminou! 🎉</h2>
+        <h2>Parabéns! Você terminou!</h2>
         <p>Tempo: {formatarTempo(tempo)}</p>
         <p>Acertos: {acertos} de {todasAsPerguntas.length}</p>
         <p>Porcentagem: {Math.round((acertos / todasAsPerguntas.length) * 100)}%</p>
